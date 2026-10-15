@@ -1,0 +1,331 @@
+#!/system/bin/sh
+# ============================================================
+#  rdctl - pengendali Reading Display
+#  Dipanggil oleh WebUI, service.sh, action.sh, atau terminal root:
+#    su -c "sh /data/adb/modules/reading_display/bin/rdctl status"
+#
+#  Perintah:
+#    status | apply | toggle | boot | reset | probe
+#    live <16 float>            terapkan matriks langsung (tanpa simpan)
+#    save <en> <engine> <boot> <auto> <interval> <16 matriks> <b64>
+#    apps-set [pkg...] | apps-get | pkgs
+#    watch (internal)
+# ============================================================
+
+SELF="$0"
+case "$SELF" in /*) ;; *) SELF="$(pwd)/$SELF" ;; esac
+MODDIR="${SELF%/bin/*}"
+[ -f "$MODDIR/module.prop" ] || MODDIR=/data/adb/modules/reading_display
+
+DATA="${RD_DATA:-/data/adb/reading_display}"
+STATE="$DATA/state"
+APPS="$DATA/apps.list"
+PIDF="$DATA/watch.pid"
+LASTSF="$DATA/last_sf"
+SYSFLAG="$DATA/sys_gray_set"
+LASTENG="$DATA/last_engine"
+
+GRAY="0.2126 0.2126 0.2126 0 0.7152 0.7152 0.7152 0 0.0722 0.0722 0.0722 0 0 0 0 1"
+
+MODE=off
+FG=""
+PREV_FG=""
+
+die() { echo "error=$*"; exit 1; }
+
+init_data() {
+  mkdir -p "$DATA"
+  [ -f "$STATE" ] || printf 'enabled=0\nengine=matrix\nboot=1\nauto=0\ninterval=3\n' > "$STATE"
+  [ -s "$DATA/matrix.read" ] || echo "$GRAY" > "$DATA/matrix.read"
+  [ -f "$APPS" ] || : > "$APPS"
+}
+
+# ---------- state (key=value) ----------
+getv() { sed -n "s/^$1=//p" "$STATE" 2>/dev/null | tail -n 1; }
+
+setv() {
+  case "$1" in
+    enabled|boot|auto)
+      case "$2" in 0|1) ;; *) return 1 ;; esac ;;
+    engine)
+      case "$2" in matrix|system) ;; *) return 1 ;; esac ;;
+    interval)
+      case "$2" in ''|*[!0-9]*) return 1 ;; esac
+      [ "$2" -ge 1 ] && [ "$2" -le 30 ] || return 1 ;;
+    *) return 1 ;;
+  esac
+  _tmp="$STATE.tmp"
+  grep -v "^$1=" "$STATE" > "$_tmp" 2>/dev/null
+  echo "$1=$2" >> "$_tmp"
+  mv "$_tmp" "$STATE"
+}
+
+# ---------- validasi matriks ----------
+is_num() {
+  case "$1" in
+    ''|-|.|*[!0-9.-]*) return 1 ;;
+    *.*.*) return 1 ;;
+    *?-*) return 1 ;;            # '-' hanya boleh di awal
+    [0-9][0-9]*|-[0-9][0-9]*) return 1 ;;   # nilai >= 10 ditolak
+  esac
+  return 0
+}
+
+valid_matrix() {
+  [ $# -eq 16 ] || return 1
+  for _v in "$@"; do is_num "$_v" || return 1; done
+  # baris terakhir mat4 (kolom-utama) wajib 0 0 0 1
+  [ "$4" = 0 ] && [ "$8" = 0 ] && [ "${12}" = 0 ] && [ "${16}" = 1 ]
+}
+
+# ---------- engine: SurfaceFlinger ----------
+sf_matrix() {
+  _args=""
+  for _v in "$@"; do _args="$_args f $_v"; done
+  _out="$(service call SurfaceFlinger 1015 i32 1 $_args 2>&1)"
+  echo "$_out" > "$LASTSF"
+  # Transaksi ini tidak menulis data balasan, jadi sukses = "Parcel(NULL)".
+  # Gagal hanya bila ada pesan error, izin ditolak, layanan hilang, atau output kosong.
+  case "$_out" in
+    ''|*rror*|*RROR*|*"does not exist"*|*"not found"*|*enied*|*"No such"*|*"Permission"*)
+      echo 0 > "$DATA/sf_ok"; return 1 ;;
+    *)
+      echo 1 > "$DATA/sf_ok"; return 0 ;;
+  esac
+}
+
+sf_off() {
+  _out="$(service call SurfaceFlinger 1015 i32 0 2>&1)"
+  echo "$_out" > "$LASTSF"
+}
+
+# ---------- engine: sistem (daltonizer monokrom) ----------
+sys_gray_on() {
+  _cur="$(settings get secure accessibility_display_daltonizer_enabled 2>/dev/null)"
+  if [ "$_cur" != "1" ] || [ -f "$SYSFLAG" ]; then
+    settings put secure accessibility_display_daltonizer 0
+    settings put secure accessibility_display_daltonizer_enabled 1
+    : > "$SYSFLAG"
+  fi
+}
+
+sys_gray_off() {
+  [ -f "$SYSFLAG" ] || return 0
+  settings put secure accessibility_display_daltonizer_enabled 0
+  rm -f "$SYSFLAG"
+}
+
+# ---------- aplikasi di depan ----------
+fg_pkg() {
+  FG=""
+  _l="$(dumpsys window 2>/dev/null | grep -m1 -E 'mCurrentFocus=Window\{')"
+  [ -z "$_l" ] && _l="$(dumpsys window 2>/dev/null | grep -m1 'mFocusedApp=')"
+  [ -z "$_l" ] && _l="$(dumpsys activity activities 2>/dev/null | grep -m1 -E 'topResumedActivity=|mResumedActivity:')"
+  FG="$(printf '%s' "$_l" | sed -n 's/.* \([A-Za-z0-9._]*\)\/.*/\1/p' | head -n 1)"
+}
+
+# ---------- tentukan & terapkan mode ----------
+calc_mode() {
+  _en="$(getv enabled)"; _au="$(getv auto)"
+  if [ "$_en" = 1 ]; then
+    MODE=read
+  elif [ "$_au" = 1 ] && [ -s "$APPS" ]; then
+    fg_pkg
+    if [ -n "$FG" ]; then PREV_FG="$FG"; else FG="$PREV_FG"; fi
+    if [ -n "$FG" ] && grep -qxF "$FG" "$APPS"; then
+      MODE=read
+    else
+      MODE=off
+    fi
+  else
+    MODE=off
+  fi
+}
+
+apply_mode() {
+  _m="$1"
+  _eg="$(getv engine)"
+  if [ "$_eg" = system ]; then
+    [ "$(cat "$LASTENG" 2>/dev/null)" = matrix ] && sf_off
+    echo system > "$LASTENG"
+    if [ "$_m" = read ]; then sys_gray_on; else sys_gray_off; fi
+    return 0
+  fi
+  echo matrix > "$LASTENG"
+  sys_gray_off
+  if [ "$_m" != read ]; then sf_off; return 0; fi
+  set -- $(cat "$DATA/matrix.read")
+  valid_matrix "$@" || { echo "error=matriks tidak valid"; return 1; }
+  sf_matrix "$@"
+}
+
+# ---------- watcher ----------
+watcher_running() {
+  [ -f "$PIDF" ] || return 1
+  kill -0 "$(cat "$PIDF" 2>/dev/null)" 2>/dev/null
+}
+
+watcher_start() {
+  watcher_running && return 0
+  nohup sh "$SELF" watch >/dev/null 2>&1 </dev/null &
+}
+
+watcher_stop() {
+  if watcher_running; then kill "$(cat "$PIDF")" 2>/dev/null; fi
+  rm -f "$PIDF"
+}
+
+ensure_watcher() {
+  if [ "$(getv enabled)" = 1 ] || [ "$(getv auto)" = 1 ]; then
+    watcher_start
+  else
+    watcher_stop
+  fi
+}
+
+cmd_watch() {
+  if watcher_running && [ "$(cat "$PIDF")" != "$$" ]; then exit 0; fi
+  echo $$ > "$PIDF"
+  _last=""; _tick=0
+  while :; do
+    if [ "$(getv enabled)" != 1 ] && [ "$(getv auto)" != 1 ]; then
+      rm -f "$PIDF"; exit 0
+    fi
+    calc_mode
+    _tick=$((_tick + 1))
+    # Sistem bisa menimpa matriks (Night Light dll): terapkan ulang berkala
+    if [ "$MODE" != "$_last" ]; then
+      apply_mode "$MODE" >/dev/null 2>&1; _last="$MODE"
+    elif [ "$(getv engine)" = matrix ] && [ "$MODE" = read ] && [ $((_tick % 6)) -eq 0 ]; then
+      apply_mode "$MODE" >/dev/null 2>&1
+    fi
+    _iv="$(getv interval)"
+    case "$_iv" in ''|*[!0-9]*) _iv=3 ;; esac
+    [ "$_iv" -lt 1 ] && _iv=1
+    if [ "$(getv auto)" != 1 ]; then _iv=$((_iv * 4)); fi
+    sleep "$_iv"
+  done
+}
+
+# ---------- perintah ----------
+cmd_apply() { calc_mode; apply_mode "$MODE"; ensure_watcher; }
+
+cmd_boot() {
+  [ "$(getv boot)" = 1 ] || exit 0
+  cmd_apply
+}
+
+cmd_toggle() {
+  if [ "$(getv enabled)" = 1 ]; then
+    setv enabled 0; echo "Mode baca: MATI"
+  else
+    setv enabled 1; echo "Mode baca: AKTIF"
+  fi
+  cmd_apply
+}
+
+cmd_reset() {
+  watcher_stop
+  setv enabled 0; setv auto 0
+  sf_off
+  sys_gray_off
+  echo "reset=ok"
+}
+
+cmd_live() {
+  valid_matrix "$@" || die "matriks tidak valid"
+  sf_matrix "$@" && echo "live=ok" || echo "live=gagal"
+}
+
+cmd_probe() {
+  # Layar jadi abu-abu 2 detik sebagai bukti visual, lalu dipulihkan
+  if sf_matrix $GRAY; then echo "probe=ok"; else echo "probe=gagal"; fi
+  echo "probe_raw=$(head -c 160 "$LASTSF" 2>/dev/null | tr '\n' ' ')"
+  sleep 2
+  calc_mode; apply_mode "$MODE" >/dev/null 2>&1
+}
+
+cmd_save() {
+  [ $# -eq 22 ] || die "jumlah argumen salah ($#)"
+  _en="$1"; _eg="$2"; _bt="$3"; _au="$4"; _iv="$5"; shift 5
+  _read=""; _i=0
+  while [ $_i -lt 16 ]; do _read="$_read $1"; shift; _i=$((_i + 1)); done
+  _b64="$1"
+
+  valid_matrix $_read || die "matriks tidak valid"
+  case "$_b64" in *[!A-Za-z0-9+/=]*) die "profil tidak valid" ;; esac
+  [ "${#_b64}" -le 8192 ] || die "profil terlalu besar"
+
+  setv enabled "$_en"   || die "enabled"
+  setv engine "$_eg"    || die "engine"
+  setv boot "$_bt"      || die "boot"
+  setv auto "$_au"      || die "auto"
+  setv interval "$_iv"  || die "interval"
+
+  echo $_read > "$DATA/matrix.read"
+  if [ -n "$_b64" ]; then
+    printf '%s' "$_b64" | base64 -d > "$DATA/profile.json.tmp" 2>/dev/null \
+      && mv "$DATA/profile.json.tmp" "$DATA/profile.json"
+  fi
+  cmd_apply
+  cmd_status
+}
+
+cmd_apps_set() {
+  : > "$APPS.tmp"
+  for _p in "$@"; do
+    case "$_p" in ''|*[!A-Za-z0-9._]*) continue ;; esac
+    echo "$_p" >> "$APPS.tmp"
+  done
+  mv "$APPS.tmp" "$APPS"
+  echo "apps=$(wc -l < "$APPS" | tr -d ' ')"
+}
+
+cmd_apps_get() { cat "$APPS" 2>/dev/null; }
+
+cmd_pkgs() {
+  pm list packages -3 2>/dev/null | sed 's/^package:/u:/'
+  pm list packages -s 2>/dev/null | sed 's/^package:/s:/'
+}
+
+cmd_status() {
+  calc_mode
+  echo "version=$(sed -n 's/^version=//p' "$MODDIR/module.prop" 2>/dev/null)"
+  echo "device=$(getprop ro.product.model)"
+  echo "android=$(getprop ro.build.version.release)"
+  echo "api=$(getprop ro.build.version.sdk)"
+  echo "enabled=$(getv enabled)"
+  echo "engine=$(getv engine)"
+  echo "boot=$(getv boot)"
+  echo "auto=$(getv auto)"
+  echo "interval=$(getv interval)"
+  echo "mode=$MODE"
+  if watcher_running; then echo "watcher=running"; else echo "watcher=stopped"; fi
+  echo "fg=$FG"
+  echo "sf_ok=$(cat "$DATA/sf_ok" 2>/dev/null)"
+  echo "sf=$(head -c 160 "$LASTSF" 2>/dev/null | tr '\n' ' ')"
+}
+
+# ---------- dispatch ----------
+init_data
+_cmd="$1"
+[ $# -gt 0 ] && shift
+
+case "$_cmd" in
+  status)    cmd_status ;;
+  apply)     cmd_apply; cmd_status ;;
+  toggle)    cmd_toggle ;;
+  boot)      cmd_boot ;;
+  reset)     cmd_reset ;;
+  probe)     cmd_probe ;;
+  live)      cmd_live "$@" ;;
+  save)      cmd_save "$@" ;;
+  apps-set)  cmd_apps_set "$@" ;;
+  apps-get)  cmd_apps_get ;;
+  pkgs)      cmd_pkgs ;;
+  watch)     cmd_watch ;;
+  *)
+    echo "rdctl: perintah tidak dikenal '$_cmd'"
+    echo "pakai: status|apply|toggle|boot|reset|probe|live|save|apps-set|apps-get|pkgs"
+    exit 1 ;;
+esac

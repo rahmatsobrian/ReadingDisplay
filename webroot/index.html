@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Reading Display</title>
+<script>
+  /* Warna Monet + safe-area dari manager KernelSU / APatch (host virtual mui.kernelsu.org).
+     Hanya dimuat saat jembatan ksu tersedia; di luar itu dipakai palet cadangan di style.css. */
+  (function () {
+    if (!window.ksu) return;
+    ['insets', 'colors'].forEach(function (n) {
+      var l = document.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = 'https://mui.kernelsu.org/internal/' + n + '.css';
+      document.head.appendChild(l);
+    });
+  })();
+</script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <filter id="rdPrev" color-interpolation-filters="sRGB" x="0" y="0" width="100%" height="100%">
+    <feColorMatrix id="rdPrevM" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"/>
+  </filter>
+  <filter id="rdGlobal" color-interpolation-filters="sRGB" x="0" y="0" width="100%" height="100%">
+    <feColorMatrix id="rdGlobalM" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"/>
+  </filter>
+</svg>
+
+<div id="shell">
+
+  <!-- ===== App bar ===== -->
+  <header class="appbar">
+    <div class="appbar-in">
+      <div class="appbar-title">
+        <span class="eyebrow">Reading Display</span>
+        <h1 id="pageTitle">Mode Baca</h1>
+      </div>
+      <span class="pill" id="statusPill">Memuat…</span>
+    </div>
+  </header>
+
+  <div id="scroller">
+  <main>
+
+    <!-- ================= BERANDA ================= -->
+    <section class="page active" id="page-home" data-title="Mode Baca">
+
+      <div class="card hero" id="hero">
+        <div class="hero-text">
+          <span class="eyebrow">Layar untuk membaca lama</span>
+          <h2 id="heroTitle">Mode baca mati</h2>
+          <p class="muted" id="heroSub">Ketuk bentuk di samping untuk mengubah layar jadi abu-abu.</p>
+        </div>
+        <button class="cookie" id="heroBtn" aria-pressed="false" aria-label="Nyalakan mode baca">
+          <svg class="cookie-bg" viewBox="0 0 100 100" aria-hidden="true"><path id="cookiePath"/></svg>
+          <svg class="cookie-ico" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 6.5C10.4 5.3 8.2 4.8 5 5v12.5c3.2-.2 5.4.3 7 1.5 1.6-1.200 3.800-1.700 7-1.500V5c-3.200-.2-5.400.3-7 1.500zM12 6.500V19"/>
+          </svg>
+        </button>
+      </div>
+
+      <h3 class="section-label">Preset</h3>
+      <div class="chips scroll" id="presets" role="radiogroup" aria-label="Preset mode baca"></div>
+
+      <div class="card">
+        <h3 class="card-title">Penyetelan live</h3>
+        <p class="muted small" id="engineNote">Geser slider: layar berubah seketika.</p>
+
+        <div class="slider" data-key="reading.sat" data-min="0" data-max="100" data-step="1" data-fmt="sat">
+          <div class="slider-head"><span class="slider-label">Saturasi warna</span><output></output></div>
+          <input type="range" aria-label="Saturasi warna">
+        </div>
+        <div class="slider" data-key="reading.warm" data-min="0" data-max="100" data-step="1" data-fmt="pct">
+          <div class="slider-head"><span class="slider-label">Kehangatan (kurangi biru)</span><output></output></div>
+          <input type="range" aria-label="Kehangatan">
+        </div>
+        <div class="slider" data-key="reading.dim" data-min="40" data-max="100" data-step="1" data-fmt="pct">
+          <div class="slider-head"><span class="slider-label">Kecerahan maksimum</span><output></output></div>
+          <input type="range" aria-label="Kecerahan maksimum">
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 class="card-title">Pratinjau</h3>
+        <div class="preview" id="previewStage">
+          <div class="swatches">
+            <i style="background:#e5484d"></i><i style="background:#f5a524"></i><i style="background:#f5d90a"></i>
+            <i style="background:#30a46c"></i><i style="background:#12a594"></i><i style="background:#3e63dd"></i>
+            <i style="background:#8e4ec6"></i><i style="background:#d6409f"></i>
+          </div>
+          <div class="ramp"></div>
+          <p class="sample"><b>Bab 1 — Senja di Tepi Kota.</b> Lampu jalan menyala satu per satu, dan bayangan menjadi panjang di atas trotoar basah. Ia membuka buku dan membaca sampai halaman terakhir tanpa terasa lelah.</p>
+        </div>
+        <p class="muted small" id="previewNote"></p>
+      </div>
+    </section>
+
+    <!-- ================= OTOMATIS ================= -->
+    <section class="page" id="page-auto" data-title="Otomatis">
+
+      <div class="card">
+        <div class="switch-row">
+          <div>
+            <h3 class="card-title">Terapkan saat boot</h3>
+            <p class="muted small">Pulihkan mode baca setiap perangkat menyala.</p>
+          </div>
+          <button class="switch" id="swBoot" role="switch" aria-checked="true" aria-label="Terapkan saat boot"><span class="thumb"></span></button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 class="card-title">Engine warna</h3>
+        <div class="seg" id="segEngine" role="radiogroup" aria-label="Engine">
+          <button role="radio" data-v="matrix" aria-checked="true">Matriks penuh</button>
+          <button role="radio" data-v="system" aria-checked="false">Monokrom sistem</button>
+        </div>
+        <p class="muted small" id="engineHelp"></p>
+      </div>
+
+      <div class="card">
+        <div class="switch-row">
+          <div>
+            <h3 class="card-title">Baca otomatis per aplikasi</h3>
+            <p class="muted small">Mode baca menyala hanya saat aplikasi pilihanmu di depan.</p>
+          </div>
+          <button class="switch" id="swAuto" role="switch" aria-checked="false" aria-label="Otomatis per aplikasi"><span class="thumb"></span></button>
+        </div>
+        <div class="slider" data-key="interval" data-min="1" data-max="10" data-step="1" data-fmt="sec">
+          <div class="slider-head"><span class="slider-label">Interval cek aplikasi</span><output></output></div>
+          <input type="range" aria-label="Interval">
+        </div>
+        <div class="chips wrap" id="appChips"></div>
+        <div class="row"><button class="btn tonal" id="btnPickApps">Pilih aplikasi</button></div>
+      </div>
+    </section>
+
+    <!-- ================= INFO ================= -->
+    <section class="page" id="page-info" data-title="Info">
+      <div class="card">
+        <h3 class="card-title">Status</h3>
+        <dl class="kv" id="statusList"></dl>
+        <div class="row">
+          <button class="btn tonal" id="btnRefresh">Segarkan</button>
+          <button class="btn tonal" id="btnProbe">Uji engine</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="card-title">Tentang</h3>
+        <p class="small">Mengatur transformasi warna compositor (SurfaceFlinger), jadi berlaku ke seluruh layar. Tidak memakai Zygisk, tidak mengubah file sistem. Transformasi hilang sendiri saat reboot lalu dipulihkan oleh modul.</p>
+        <p class="small muted">Sistem dapat menimpa matriks (mis. Night Light). Watcher menerapkannya ulang berkala.</p>
+        <div class="row"><button class="btn danger" id="btnReset">Reset darurat</button></div>
+      </div>
+    </section>
+
+  </main>
+  </div>
+
+  <!-- ===== Navigasi mengambang ===== -->
+  <nav class="nav" id="nav" aria-label="Navigasi">
+    <button data-page="home" class="active" aria-label="Beranda">
+      <svg viewBox="0 0 24 24"><path d="M4 11 12 4l8 7v9h-5v-6H9v6H4z"/></svg><span>Beranda</span>
+    </button>
+    <button data-page="auto" aria-label="Otomatis">
+      <svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><span>Otomatis</span>
+    </button>
+    <button data-page="info" aria-label="Info">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.600v.01"/></svg><span>Info</span>
+    </button>
+  </nav>
+
+  <!-- ===== Lembar pilih aplikasi ===== -->
+  <div class="scrim" id="scrim" hidden></div>
+  <div class="sheet" id="sheet" hidden role="dialog" aria-label="Pilih aplikasi">
+    <div class="sheet-grab"></div>
+    <h3 class="card-title">Pilih aplikasi baca</h3>
+    <input class="search" id="appSearch" type="search" placeholder="Cari paket…" autocomplete="off" spellcheck="false">
+    <button class="chip toggle" id="chipSystem" aria-pressed="false">Tampilkan aplikasi sistem</button>
+    <div class="applist" id="appList"></div>
+    <div class="row"><button class="btn filled" id="sheetDone">Selesai</button></div>
+  </div>
+
+  <div class="snack" id="snack" hidden></div>
+</div>
+
+<script src="lib/color.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

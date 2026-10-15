@@ -1,0 +1,260 @@
+/* =====================================================================
+   Reading Display — Material 3 Expressive
+   Warna: variabel Monet dari mui.kernelsu.org (--primary, --surfaceContainer, …)
+   bila tersedia; kalau tidak, palet cadangan --f-* di bawah.
+   ===================================================================== */
+
+:root {
+  color-scheme: light dark;
+
+  /* palet cadangan (terang) */
+  --f-primary: #006b5e;           --f-onPrimary: #ffffff;
+  --f-primaryContainer: #9ef2df;  --f-onPrimaryContainer: #00201b;
+  --f-secondary: #4a635e;         --f-onSecondary: #ffffff;
+  --f-secondaryContainer: #cde8e1;--f-onSecondaryContainer: #05201b;
+  --f-tertiary: #7a5900;          --f-tertiaryContainer: #ffdea0; --f-onTertiaryContainer: #261900;
+  --f-error: #ba1a1a;             --f-onError: #ffffff;
+  --f-errorContainer: #ffdad6;    --f-onErrorContainer: #410002;
+  --f-surface: #f4fbf8;           --f-onSurface: #161d1b;
+  --f-surfaceVariant: #dae5e1;    --f-onSurfaceVariant: #3f4947;
+  --f-scLowest: #ffffff; --f-scLow: #eef5f2; --f-sc: #e8f0ec; --f-scHigh: #e3eae7; --f-scHighest: #dde4e1;
+  --f-outline: #6f7977;           --f-outlineVariant: #bec9c6;
+  --f-inverseSurface: #2b3230;    --f-inverseOnSurface: #ecf2ef;
+
+  /* token semantik */
+  --m-primary: var(--primary, var(--f-primary));
+  --m-onPrimary: var(--onPrimary, var(--f-onPrimary));
+  --m-primaryContainer: var(--primaryContainer, var(--f-primaryContainer));
+  --m-onPrimaryContainer: var(--onPrimaryContainer, var(--f-onPrimaryContainer));
+  --m-secondary: var(--secondary, var(--f-secondary));
+  --m-secondaryContainer: var(--secondaryContainer, var(--f-secondaryContainer));
+  --m-onSecondaryContainer: var(--onSecondaryContainer, var(--on-secondaryContainer, var(--f-onSecondaryContainer)));
+  --m-tertiary: var(--tertiary, var(--f-tertiary));
+  --m-tertiaryContainer: var(--tertiaryContainer, var(--f-tertiaryContainer));
+  --m-onTertiaryContainer: var(--onTertiaryContainer, var(--f-onTertiaryContainer));
+  --m-error: var(--error, var(--f-error));
+  --m-onError: var(--onError, var(--f-onError));
+  --m-errorContainer: var(--errorContainer, var(--f-errorContainer));
+  --m-onErrorContainer: var(--onErrorContainer, var(--f-onErrorContainer));
+  --m-bg: var(--background, var(--f-surface));
+  --m-onSurface: var(--onSurface, var(--onBackground, var(--f-onSurface)));
+  --m-onSurfaceVariant: var(--onSurfaceVariant, var(--f-onSurfaceVariant));
+  --m-sc-low: var(--surfaceContainerLow, var(--f-scLow));
+  --m-sc: var(--surfaceContainer, var(--f-sc));
+  --m-sc-high: var(--surfaceContainerHigh, var(--f-scHigh));
+  --m-sc-highest: var(--surfaceContainerHighest, var(--f-scHighest));
+  --m-outline: var(--outline, var(--f-outline));
+  --m-outlineVariant: var(--outlineVariant, var(--f-outlineVariant));
+  --m-inverseSurface: var(--inverseSurface, var(--f-inverseSurface));
+  --m-inverseOnSurface: var(--inverseOnSurface, var(--f-inverseOnSurface));
+
+  /* bentuk expressive */
+  --r-sm: 8px; --r-md: 16px; --r-lg: 24px; --r-xl: 32px; --r-xxl: 48px; --r-full: 999px;
+
+  /* gerak: spring dengan overshoot */
+  --spring: cubic-bezier(.34, 1.56, .64, 1);
+  --spring-soft: cubic-bezier(.3, 1.25, .5, 1);
+  --emph: cubic-bezier(.2, 0, 0, 1);
+
+  /* safe-area (insets.css dari manager, atau env()) */
+  --inset-t: var(--window-inset-top, env(safe-area-inset-top, 0px));
+  --inset-b: var(--window-inset-bottom, env(safe-area-inset-bottom, 0px));
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --f-primary: #82d5c3;           --f-onPrimary: #00382f;
+    --f-primaryContainer: #005046;  --f-onPrimaryContainer: #9ef2df;
+    --f-secondary: #b1ccc5;         --f-onSecondary: #1c3530;
+    --f-secondaryContainer: #334b46;--f-onSecondaryContainer: #cde8e1;
+    --f-tertiary: #efc066;          --f-tertiaryContainer: #5d4200; --f-onTertiaryContainer: #ffdea0;
+    --f-error: #ffb4ab;             --f-onError: #690005;
+    --f-errorContainer: #93000a;    --f-onErrorContainer: #ffdad6;
+    --f-surface: #0e1513;           --f-onSurface: #dde4e1;
+    --f-surfaceVariant: #3f4947;    --f-onSurfaceVariant: #bec9c6;
+    --f-scLowest: #090f0e; --f-scLow: #161d1b; --f-sc: #1a211f; --f-scHigh: #242b29; --f-scHighest: #2f3634;
+    --f-outline: #899390;           --f-outlineVariant: #3f4947;
+    --f-inverseSurface: #dde4e1;    --f-inverseOnSurface: #2b3230;
+  }
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; margin: 0; overflow: hidden; background: var(--m-bg); }
+body {
+  font-family: "Google Sans Flex", "Google Sans", Roboto, "Segoe UI", system-ui, sans-serif;
+  color: var(--m-onSurface);
+  font-size: 15px; line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+[hidden] { display: none !important; }
+
+/* #shell = pembungkus tetap seukuran viewport (tempat filter demo dipasang);
+   #scroller = satu-satunya area scroll. Elemen fixed (nav, overlay) tidak ikut tergulung. */
+#shell { position: fixed; inset: 0; overflow: hidden; background: var(--m-bg); }
+#scroller { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
+
+/* ---------- tipografi ---------- */
+h1, h2, h3, p { margin: 0; }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--m-primary); }
+.muted { color: var(--m-onSurfaceVariant); }
+.small { font-size: 13px; }
+.section-label { font-size: 14px; font-weight: 700; letter-spacing: .02em; color: var(--m-onSurfaceVariant); margin: 22px 8px 10px; }
+.card-title { font-size: 19px; font-weight: 700; letter-spacing: -.01em; }
+
+/* ---------- app bar ---------- */
+.appbar { position: fixed; top: 0; left: 0; right: 0; z-index: 20; padding-top: var(--inset-t);
+  background: linear-gradient(var(--m-bg) 72%, transparent); }
+.appbar-in { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 14px 20px 14px; }
+.appbar h1 { font-size: 38px; line-height: 1.05; font-weight: 800; letter-spacing: -.03em; }
+.pill { font-size: 12px; font-weight: 700; padding: 7px 12px; border-radius: var(--r-full);
+  background: var(--m-secondaryContainer); color: var(--m-onSecondaryContainer); white-space: nowrap;
+  transition: background .3s var(--emph), color .3s var(--emph); }
+.pill.on { background: var(--m-primary); color: var(--m-onPrimary); }
+.pill.warn { background: var(--m-errorContainer); color: var(--m-onErrorContainer); }
+
+/* ---------- halaman ---------- */
+main { padding: calc(var(--inset-t) + 104px) 16px calc(var(--inset-b) + 120px); max-width: 640px; margin: 0 auto; }
+.page { display: none; }
+.page.active { display: block; animation: pageIn .5s var(--spring-soft); }
+@keyframes pageIn { from { opacity: 0; transform: translateY(18px) scale(.985); } to { opacity: 1; transform: none; } }
+
+/* ---------- kartu ---------- */
+.card { background: var(--m-sc-low); border-radius: var(--r-xl); padding: 20px; margin-top: 14px; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.card .muted.small { margin-top: 4px; }
+
+.hero { display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  background: var(--m-sc-high); border-radius: var(--r-xxl); padding: 24px 22px 24px 26px; margin-top: 0; overflow: hidden;
+  transition: background .5s var(--emph); }
+.hero.on { background: var(--m-primaryContainer); color: var(--m-onPrimaryContainer); }
+.hero.on .muted, .hero.on .eyebrow { color: var(--m-onPrimaryContainer); }
+.hero-text { flex: 1; min-width: 0; display: grid; gap: 6px; }
+.hero h2 { font-size: 30px; line-height: 1.08; font-weight: 800; letter-spacing: -.03em; }
+
+.cookie { position: relative; width: 112px; height: 112px; flex: none; border: 0; padding: 0; background: none; cursor: pointer;
+  color: var(--m-onSurfaceVariant); transition: transform .45s var(--spring); }
+.cookie:active { transform: scale(.9); }
+.cookie-bg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cookie-bg path { fill: var(--m-sc-highest); transition: fill .4s var(--emph); }
+.cookie[aria-pressed="true"] { color: var(--m-onPrimary); }
+.cookie[aria-pressed="true"] .cookie-bg path { fill: var(--m-primary); }
+.cookie-ico { position: absolute; inset: 0; margin: auto; width: 44px; height: 44px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- chip ---------- */
+.chips { display: flex; gap: 8px; }
+.chips.scroll { overflow-x: auto; padding: 2px 4px 10px; margin: 0 -16px; padding-inline: 16px; scrollbar-width: none; }
+.chips.scroll::-webkit-scrollbar { display: none; }
+.chips.wrap { flex-wrap: wrap; margin-top: 12px; }
+.chips.tight { margin: 0 -4px; padding-inline: 4px; }
+.chip { font: inherit; font-weight: 600; font-size: 14px; white-space: nowrap; border: 0; cursor: pointer;
+  padding: 10px 18px; border-radius: var(--r-md); background: var(--m-sc-highest); color: var(--m-onSurface);
+  transition: border-radius .4s var(--spring), background .25s var(--emph), color .25s var(--emph), transform .3s var(--spring); }
+.chip:active { transform: scale(.94); }
+.chip[aria-checked="true"], .chip[aria-pressed="true"] { background: var(--m-secondaryContainer); color: var(--m-onSecondaryContainer); border-radius: var(--r-full); }
+.chip.app { background: var(--m-tertiaryContainer); color: var(--m-onTertiaryContainer); border-radius: var(--r-full); font-size: 13px; padding: 8px 14px; }
+
+/* ---------- slider expressive ---------- */
+.slider { margin-top: 18px; --trk: var(--m-sc-highest); --fill: var(--m-primary); --p: 0; }
+.slider.disabled { opacity: .45; pointer-events: none; }
+.slider-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; padding: 0 4px; }
+.slider-label { font-weight: 600; }
+.slider output { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--m-primary); font-size: 14px; }
+.slider input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 44px; margin: 0; background: transparent; touch-action: pan-y; cursor: pointer; }
+.slider input[type=range]::-webkit-slider-runnable-track {
+  height: 30px; border-radius: 15px;
+  background: linear-gradient(90deg,
+    var(--fill) 0, var(--fill) calc(var(--p) * 1% - 8px),
+    transparent calc(var(--p) * 1% - 8px), transparent calc(var(--p) * 1% + 8px),
+    var(--trk) calc(var(--p) * 1% + 8px), var(--trk) 100%);
+}
+.slider input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 6px; height: 44px; margin-top: -7px; border-radius: 3px;
+  background: var(--fill); box-shadow: 0 0 0 0 transparent; transition: width .25s var(--spring), border-radius .25s var(--spring);
+}
+.slider input[type=range]:active::-webkit-slider-thumb { width: 4px; }
+.slider input[type=range]::-moz-range-track { height: 30px; border-radius: 15px; background: var(--trk); }
+.slider input[type=range]::-moz-range-progress { height: 30px; border-radius: 15px; background: var(--fill); }
+.slider input[type=range]::-moz-range-thumb { width: 6px; height: 44px; border: 0; border-radius: 3px; background: var(--fill); }
+.slider.compact { margin-top: 6px; }
+.slider.compact .slider-head { margin-bottom: 0; }
+.slider.compact input[type=range] { height: 36px; }
+.slider.compact input[type=range]::-webkit-slider-runnable-track { height: 22px; border-radius: 11px; }
+.slider.compact input[type=range]::-webkit-slider-thumb { height: 34px; margin-top: -6px; }
+
+/* ---------- switch ---------- */
+.switch-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.switch { position: relative; flex: none; width: 56px; height: 34px; border: 2px solid var(--m-outline); border-radius: var(--r-full);
+  background: var(--m-sc-highest); cursor: pointer; padding: 0; transition: background .3s var(--emph), border-color .3s var(--emph); }
+.switch .thumb { position: absolute; top: 50%; left: 5px; width: 16px; height: 16px; margin-top: -8px; border-radius: var(--r-full);
+  background: var(--m-outline); transition: left .45s var(--spring), width .3s var(--spring), height .3s var(--spring), margin-top .3s var(--spring), background .25s; }
+.switch:active .thumb { width: 26px; height: 26px; margin-top: -13px; left: 3px; }
+.switch[aria-checked="true"] { background: var(--m-primary); border-color: var(--m-primary); }
+.switch[aria-checked="true"] .thumb { left: 25px; width: 24px; height: 24px; margin-top: -12px; background: var(--m-onPrimary); }
+.switch[aria-checked="true"]:active .thumb { left: 21px; width: 28px; height: 28px; margin-top: -14px; }
+
+/* ---------- button group (segmented) ---------- */
+.seg { display: flex; gap: 3px; margin-top: 14px; }
+.seg button { flex: 1; font: inherit; font-weight: 700; font-size: 14px; border: 0; cursor: pointer; padding: 14px 10px;
+  background: var(--m-sc-highest); color: var(--m-onSurface); border-radius: var(--r-sm);
+  transition: border-radius .45s var(--spring), background .25s, flex .45s var(--spring); }
+.seg button:first-child { border-radius: var(--r-full) var(--r-sm) var(--r-sm) var(--r-full); }
+.seg button:last-child { border-radius: var(--r-sm) var(--r-full) var(--r-full) var(--r-sm); }
+.seg button[aria-checked="true"] { background: var(--m-primary); color: var(--m-onPrimary); border-radius: var(--r-full); flex: 1.25; }
+
+/* ---------- tombol ---------- */
+.row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+.btn { font: inherit; font-weight: 700; font-size: 14px; border: 0; cursor: pointer; padding: 14px 24px; border-radius: var(--r-full);
+  transition: border-radius .4s var(--spring), transform .3s var(--spring), background .25s; }
+.btn:active { transform: scale(.94); border-radius: var(--r-md); }
+.btn.filled { background: var(--m-primary); color: var(--m-onPrimary); }
+.btn.tonal { background: var(--m-secondaryContainer); color: var(--m-onSecondaryContainer); }
+.btn.outline { background: transparent; color: var(--m-primary); box-shadow: inset 0 0 0 1.5px var(--m-outline); }
+.btn.danger { background: var(--m-errorContainer); color: var(--m-onErrorContainer); }
+
+/* ---------- pratinjau ---------- */
+.preview { margin-top: 14px; padding: 14px; border-radius: var(--r-lg); background: #f6f1e7; color: #2a2620; }
+.swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+.swatches i { aspect-ratio: 1; border-radius: 12px; display: block; }
+.ramp { height: 22px; border-radius: 11px; margin: 12px 0; background: linear-gradient(90deg, #000, #fff); }
+.sample { font-family: Georgia, "Noto Serif", serif; font-size: 15.5px; line-height: 1.6; }
+
+/* ---------- info / matriks ---------- */
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 14px 0 0; }
+.kv dt { color: var(--m-onSurfaceVariant); }
+.kv dd { margin: 0; font-weight: 600; text-align: right; word-break: break-all; }
+/* ---------- navigasi mengambang ---------- */
+.nav { position: fixed; left: 12px; right: 12px; bottom: calc(12px + var(--inset-b)); z-index: 30; max-width: 616px; margin: 0 auto;
+  display: flex; gap: 4px; padding: 6px; border-radius: var(--r-full);
+  background: var(--m-sc-high); box-shadow: 0 6px 24px rgba(0,0,0,.18); }
+.nav button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; height: 52px; border: 0; cursor: pointer;
+  border-radius: var(--r-full); background: transparent; color: var(--m-onSurfaceVariant); font: inherit; font-weight: 700; font-size: 13px;
+  transition: flex .5s var(--spring), background .3s var(--emph), color .3s; overflow: hidden; }
+.nav button span { max-width: 0; opacity: 0; white-space: nowrap; transition: max-width .5s var(--spring), opacity .25s; }
+.nav button svg { width: 24px; height: 24px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.nav button.active { flex: 2.6; background: var(--m-primaryContainer); color: var(--m-onPrimaryContainer); }
+.nav button.active span { max-width: 90px; opacity: 1; }
+
+/* ---------- lembar pilih app ---------- */
+.scrim { position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,.45); animation: fade .3s; }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 71; max-width: 640px; margin: 0 auto; max-height: 82vh; display: flex; flex-direction: column;
+  background: var(--m-sc-low); border-radius: var(--r-xxl) var(--r-xxl) 0 0; padding: 12px 20px calc(18px + var(--inset-b)); animation: sheetIn .55s var(--spring-soft); }
+.sheet-grab { width: 40px; height: 5px; border-radius: 3px; background: var(--m-outlineVariant); margin: 0 auto 14px; }
+.search { margin: 12px 0 10px; width: 100%; font: inherit; padding: 14px 18px; border: 0; border-radius: var(--r-full); background: var(--m-sc-highest); color: var(--m-onSurface); outline: 2px solid transparent; transition: outline-color .2s; }
+.search:focus { outline-color: var(--m-primary); }
+.applist { overflow-y: auto; margin-top: 10px; flex: 1; min-height: 120px; }
+.applist label { display: flex; align-items: center; gap: 12px; padding: 12px 6px; border-radius: var(--r-md); cursor: pointer; word-break: break-all; }
+.applist label:active { background: var(--m-sc-highest); }
+.applist input { width: 20px; height: 20px; accent-color: var(--m-primary); flex: none; }
+.applist .empty { text-align: center; padding: 24px; color: var(--m-onSurfaceVariant); }
+@keyframes fade { from { opacity: 0; } }
+@keyframes sheetIn { from { transform: translateY(100%); } }
+
+/* ---------- snackbar ---------- */
+.snack { position: fixed; left: 16px; right: 16px; bottom: calc(88px + var(--inset-b)); z-index: 90; max-width: 520px; margin: 0 auto;
+  background: var(--m-inverseSurface); color: var(--m-inverseOnSurface); padding: 14px 20px; border-radius: var(--r-lg); font-weight: 600;
+  animation: snackIn .5s var(--spring); }
+@keyframes snackIn { from { opacity: 0; transform: translateY(20px) scale(.96); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
